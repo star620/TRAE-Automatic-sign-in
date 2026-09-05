@@ -30,15 +30,15 @@ public class TextInputDialog : Form
         MinimizeBox = false;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(560, 352);
+        ClientSize = new Size(MainForm.S(560), MainForm.S(352));
         BackColor = Color.White;
         ForeColor = TextMain;
 
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 1, RowCount = 4, BackColor = Color.White };
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 168));  // 说明（需容纳可换行的引导文字，给足高度避免截断）
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));   // 输入行
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));   // 工具行
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));   // 按钮行
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(MainForm.S(20)), ColumnCount = 1, RowCount = 4, BackColor = Color.White };
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, MainForm.S(168)));  // 说明（需容纳可换行的引导文字，给足高度避免截断）
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, MainForm.S(34)));   // 输入行
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, MainForm.S(30)));   // 工具行
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, MainForm.S(46)));   // 按钮行
 
         var lblHint = new Label
         {
@@ -53,7 +53,7 @@ public class TextInputDialog : Form
         _txt.BorderStyle = BorderStyle.FixedSingle;
         _txt.Font = new Font("Consolas", 10);
 
-        var btnPaste = new Button { Text = "从剪贴板粘贴", AutoSize = false, Height = 26, FlatStyle = FlatStyle.Flat };
+        var btnPaste = new Button { Text = "从剪贴板粘贴", AutoSize = false, Width = MainForm.S(150), Height = MainForm.S(26), FlatStyle = FlatStyle.Flat };
         btnPaste.Click += (_, _) =>
         {
             try { if (Clipboard.ContainsText()) _txt.Text = Clipboard.GetText().Trim(); }
@@ -71,8 +71,9 @@ public class TextInputDialog : Form
             {
                 Text = "打开 GitHub 创建页",
                 AutoSize = false,
-                Height = 26,
-                Margin = new Padding(8, 0, 0, 0),
+                Width = MainForm.S(170),
+                Height = MainForm.S(26),
+                Margin = new Padding(MainForm.S(8), 0, 0, 0),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Accent,
                 ForeColor = Color.White,
@@ -86,8 +87,8 @@ public class TextInputDialog : Form
             toolRow.Controls.Add(btnOpen);
         }
 
-        var ok = new Button { Text = "确定", DialogResult = DialogResult.OK, Width = 96, Height = 34, BackColor = Accent, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-        var cancel = new Button { Text = "取消", DialogResult = DialogResult.Cancel, Width = 96, Height = 34, FlatStyle = FlatStyle.Flat };
+        var ok = new Button { Text = "确定", DialogResult = DialogResult.OK, Width = MainForm.S(96), Height = MainForm.S(34), BackColor = Accent, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+        var cancel = new Button { Text = "取消", DialogResult = DialogResult.Cancel, Width = MainForm.S(96), Height = MainForm.S(34), FlatStyle = FlatStyle.Flat };
 
         var btnRow = new FlowLayoutPanel { Dock = DockStyle.Bottom, FlowDirection = FlowDirection.RightToLeft, WrapContents = false };
         btnRow.Controls.Add(cancel);

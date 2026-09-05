@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace TraeCheckin;
 
 /// <summary>
@@ -12,6 +14,20 @@ public partial class MainForm : Form
     private static readonly Color CardBg = Color.White;
     private static readonly Color TextMain = Color.FromArgb(15, 23, 42);       // #0F172A
     private static readonly Color TextMuted = Color.FromArgb(100, 116, 139);   // #64748B
+
+    // —— 高显示缩放适配（如 175% 缩放）——
+    // 进程为 PerMonitorV2 DPI 感知：字体按 DPI 放大渲染，而代码写死的像素尺寸不会变，
+    // 于是出现「标题被下方内容遮盖 / 文字被裁剪」。这里取系统 DPI 算出缩放系数，
+    // 所有按 96-DPI 设计的固定布局尺寸统一经 S() 换算，与字体保持同比例放大。
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForSystem();
+
+    /// <summary>显示缩放系数：96-DPI（100%）下为 1.0，175% 缩放约 1.75。</summary>
+    internal static readonly float DpiScale = Math.Max(1f, GetDpiForSystem() / 96f);
+
+    /// <summary>把 96-DPI 设计尺寸换算为当前显示缩放下的像素尺寸。</summary>
+    internal static int S(float v) => (int)Math.Round(v * DpiScale);
 
     private AppConfig _config;
     private readonly AccountStore _accountStore;
@@ -109,7 +125,9 @@ public partial class MainForm : Form
         MigrateLegacyHistoryFiles();
 
         Text = "Trae 每日签到助手";
-        ClientSize = new Size(1200, 780);
+        // 窗口尺寸同样按缩放换算（否则放大后的内容会被固定小窗裁剪），并防超出屏幕
+        var wa = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, S(1200), S(780));
+        ClientSize = new Size(Math.Min(S(1200), wa.Width), Math.Min(S(780), wa.Height));
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = true;
@@ -125,7 +143,7 @@ public partial class MainForm : Form
     private void BuildUi()
     {
         var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty, Padding = Padding.Empty };
-        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, S(210)));
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -139,14 +157,14 @@ public partial class MainForm : Form
         var side = new Panel { Dock = DockStyle.Fill, BackColor = SidebarBg };
 
         // 标题区：单独 Panel 精确定位，避免 Dock 叠加 padding 导致截断
-        var header = new Panel { Dock = DockStyle.Top, Height = 160, BackColor = SidebarBg };
+        var header = new Panel { Dock = DockStyle.Top, Height = S(160), BackColor = SidebarBg };
         var title = new Label
         {
             Text = "Trae",
             Font = new Font("Segoe UI", 20, FontStyle.Bold),
             ForeColor = Color.White,
-            Location = new Point(16, 28),
-            Size = new Size(180, 46),
+            Location = new Point(S(16), S(28)),
+            Size = new Size(S(180), S(46)),
             AutoSize = false,
             TextAlign = ContentAlignment.MiddleLeft
         };
@@ -155,15 +173,15 @@ public partial class MainForm : Form
             Text = "每日签到助手",
             Font = new Font("Segoe UI", 11, FontStyle.Bold),
             ForeColor = Color.FromArgb(148, 163, 184),
-            Location = new Point(16, 84),
-            Size = new Size(180, 28),
+            Location = new Point(S(16), S(84)),
+            Size = new Size(S(180), S(28)),
             AutoSize = false,
             TextAlign = ContentAlignment.MiddleLeft
         };
         header.Controls.Add(subtitle);
         header.Controls.Add(title);
 
-        var nav = new Panel { Dock = DockStyle.Top, Height = 200, BackColor = SidebarBg, Padding = new Padding(0, 14, 0, 0) };
+        var nav = new Panel { Dock = DockStyle.Top, Height = S(200), BackColor = SidebarBg, Padding = new Padding(0, S(14), 0, 0) };
         _navItems.Add(NavItem("仪表盘", 0));
         _navItems.Add(NavItem("签到记录", 1));
         _navItems.Add(NavItem("云端签到", 2));
@@ -171,10 +189,10 @@ public partial class MainForm : Form
         for (int i = _navItems.Count - 1; i >= 0; i--)
             nav.Controls.Add(_navItems[i]);
 
-        var bottom = new Panel { Dock = DockStyle.Fill, BackColor = SidebarBg, Padding = new Padding(14, 0, 14, 16) };
+        var bottom = new Panel { Dock = DockStyle.Fill, BackColor = SidebarBg, Padding = new Padding(S(14), 0, S(14), S(16)) };
         _btnCheckin.Text = "立即签到";
         _btnCheckin.Dock = DockStyle.Bottom;
-        _btnCheckin.Height = 46;
+        _btnCheckin.Height = S(46);
         _btnCheckin.FlatStyle = FlatStyle.Flat;
         _btnCheckin.FlatAppearance.BorderSize = 0;
         _btnCheckin.BackColor = Accent;
@@ -193,10 +211,10 @@ public partial class MainForm : Form
     {
         var p = new Panel
         {
-            Height = 44,
+            Height = S(44),
             Dock = DockStyle.Top,
             BackColor = SidebarBg,
-            Padding = new Padding(12, 0, 12, 0),
+            Padding = new Padding(S(12), 0, S(12), 0),
             Cursor = Cursors.Hand,
             Tag = index
         };
@@ -245,7 +263,7 @@ public partial class MainForm : Form
 
     private Panel BuildDashboard()
     {
-        var p = new Panel { Dock = DockStyle.Fill, BackColor = ContentBg, Padding = new Padding(16) };
+        var p = new Panel { Dock = DockStyle.Fill, BackColor = ContentBg, Padding = new Padding(S(16)) };
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -257,10 +275,10 @@ public partial class MainForm : Form
         };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 130));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 190));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, S(130)));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, S(100)));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, S(96)));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, S(190)));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         // 剩余积分（跨两列）
@@ -320,11 +338,11 @@ public partial class MainForm : Form
 
     private Panel BuildHistory()
     {
-        var p = new Panel { Dock = DockStyle.Fill, BackColor = ContentBg, Padding = new Padding(16) };
+        var p = new Panel { Dock = DockStyle.Fill, BackColor = ContentBg, Padding = new Padding(S(16)) };
         _lblLastCheckin = new Label
         {
             Dock = DockStyle.Top,
-            Height = 34,
+            Height = S(34),
             Font = new Font("Segoe UI", 11),
             ForeColor = TextMain,
             TextAlign = ContentAlignment.MiddleLeft
@@ -342,42 +360,68 @@ public partial class MainForm : Form
 
     private Panel BuildSettings()
     {
-        var p = new Panel { Dock = DockStyle.Fill, BackColor = ContentBg, Padding = new Padding(16) };
-        var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 6, BackColor = ContentBg };
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 150));
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 176));
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));
-        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        var p = new Panel { Dock = DockStyle.Fill, BackColor = ContentBg, Padding = new Padding(S(16)) };
 
-        var autoPanel = CardPanel("每日自动签到", BuildAutoRow());
+        // 可滚动画布：高 DPI 下内容随字体放大、总高超过固定窗口时用滚动条容纳，
+        // 既不遮盖相邻卡片，也不把底部提示行（含版本号）挤掉。
+        var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = ContentBg };
+
+        // 全部行高 AutoSize：按控件实际渲染高度自适应（与 DPI/显示缩放无关），
+        // 从根上消除「标题被裁剪」与「卡片内大片留白」；超出窗口高度时由外层滚动条兜底
+        var grid = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1,
+            RowCount = 5,
+            BackColor = ContentBg,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        for (int i = 0; i < 5; i++)
+            grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        // minHeight 为卡片高度下限（96-DPI 设计值）：高 DPI 下嵌套 Dock 控件的 AutoSize
+        // 测量链可能返回偏小值导致行高不足（内容被裁/消失），MinimumSize 兜底保证可显示
+        var autoPanel = CardPanel("每日自动签到", BuildAutoRow(), 74);
         grid.Controls.Add(autoPanel, 0, 0);
 
-        var autoStartPanel = CardPanel("开机自启动", BuildAutoStartRow());
+        var autoStartPanel = CardPanel("开机自启动", BuildAutoStartRow(), 74);
         grid.Controls.Add(autoStartPanel, 0, 1);
 
-        var tokenPanel = CardPanel("当前账号登录 Token", BuildTokenRow());
+        var tokenPanel = CardPanel("当前账号登录 Token", BuildTokenRow(), 140);
         grid.Controls.Add(tokenPanel, 0, 2);
 
-        var acctPanel = CardPanel("多账号管理", BuildAccountRow());
+        var acctPanel = CardPanel("多账号管理", BuildAccountRow(), 155);
         grid.Controls.Add(acctPanel, 0, 3);
 
-        var notifyPanel = CardPanel("云端签到推送（飞书机器人）", BuildWebhookRow());
+        var notifyPanel = CardPanel("云端签到推送（飞书机器人）", BuildWebhookRow(), 82);
         grid.Controls.Add(notifyPanel, 0, 4);
 
-        var hint = new Label
+        // 版本号+提示固定为页脚（钉在页面底部、不参与滚动），任何缩放下始终可见。
+        // 不用 AutoSize：多行 Label + Dock=Bottom 的高度测量在高 DPI 下偏小，第二行会被裁
+        var footer = new Label
         {
             Text = $"版本：{VersionText}" + Environment.NewLine +
                    "提示：本程序固定小窗显示。关闭窗口后自动最小化到系统托盘，后台继续自动签到。",
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Bottom,
+            AutoSize = false,
+            Height = S(46),
             ForeColor = TextMuted,
             Font = new Font("Segoe UI", 9),
-            Padding = new Padding(4, 12, 0, 0)
+            Padding = new Padding(4, 8, 0, 0),
+            TextAlign = ContentAlignment.TopLeft
         };
-        grid.Controls.Add(hint, 0, 5);
 
-        p.Controls.Add(grid);
+        // AutoScroll 对「Dock=Top + AutoSize」的子控件不会自动出滚动条，
+        // 在 grid 高度变化时同步最小滚动范围，内容超出时即可滚动
+        grid.Resize += (_, _) => scroll.AutoScrollMinSize = new Size(0, grid.Height);
+
+        scroll.Controls.Add(grid);
+        p.Controls.Add(scroll);
+        p.Controls.Add(footer);
         return p;
     }
 
@@ -394,7 +438,7 @@ public partial class MainForm : Form
         _txtToken.ForeColor = TextMain;
         _txtToken.Font = new Font("Consolas", 9);
         _txtToken.Dock = DockStyle.Top;
-        _txtToken.Height = 54;
+        _txtToken.Height = S(54);
 
         var bottomRow = new FlowLayoutPanel
         {
@@ -408,9 +452,9 @@ public partial class MainForm : Form
         var btnCopy = new Button
         {
             Text = "复制 Token",
-            Width = 100,
-            Height = 34,
-            Margin = new Padding(0, 0, 12, 0),
+            Width = S(100),
+            Height = S(34),
+            Margin = new Padding(0, 0, S(12), 0),
             FlatStyle = FlatStyle.Flat,
             BackColor = Accent,
             ForeColor = Color.White,
@@ -475,7 +519,7 @@ public partial class MainForm : Form
         if (TimeSpan.TryParse(_config.AutoCheckinTime, out var ts))
             _dtpTimeSet.Value = DateTime.Today.Add(ts);
         _dtpTimeSet.ValueChanged += (_, _) => SyncAutoCheckin(_chkAutoSet.Checked, _dtpTimeSet.Value);
-        _dtpTimeSet.Width = 90;
+        _dtpTimeSet.Width = S(90);
         row.Controls.Add(_chkAutoSet);
         row.Controls.Add(lbl);
         row.Controls.Add(_dtpTimeSet);
@@ -507,48 +551,51 @@ public partial class MainForm : Form
 
     private Control BuildAccountRow()
     {
-        var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = CardBg };
-        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));
-        table.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        // 用普通 Panel + Dock 布局（与 Token 卡片相同的可靠结构）：
+        // TableLayoutPanel 作为 Dock=Fill 子控件时，外层 AutoSize 行的测量链在高 DPI 下
+        // 返回偏小值，导致本卡片行高不足——按钮底部被裁、第二行（会员+提示）整行不可见。
+        var panel = new Panel { Dock = DockStyle.Fill, BackColor = CardBg };
 
         // 第一行：下拉 + 操作按钮（不强制 ComboBox 高度，交给系统按字体计算，避免高 DPI 字形底部被裁）
         var top = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = CardBg };
 
         _cmbAccount.DropDownStyle = ComboBoxStyle.DropDownList;
-        _cmbAccount.Width = 300;
-        _cmbAccount.Margin = new Padding(0, 8, 10, 0);
+        _cmbAccount.Width = S(300);
+        _cmbAccount.Margin = new Padding(0, S(8), S(10), 0);
         _cmbAccount.FlatStyle = FlatStyle.Flat;
         _cmbAccount.SelectedIndexChanged += (_, _) => OnAccountSelected();
         top.Controls.Add(_cmbAccount);
 
-        var btnAdd = new Button { Text = "添加账号", Width = 96, Height = 34, Margin = new Padding(0, 6, 8, 0), FlatStyle = FlatStyle.Flat, BackColor = Accent, ForeColor = Color.White, Cursor = Cursors.Hand };
+        var btnAdd = new Button { Text = "添加账号", Width = S(96), Height = S(34), Margin = new Padding(0, S(6), S(8), 0), FlatStyle = FlatStyle.Flat, BackColor = Accent, ForeColor = Color.White, Cursor = Cursors.Hand };
         btnAdd.FlatAppearance.BorderSize = 0;
         btnAdd.Click += async (_, _) => await AddAccountAsync();
         top.Controls.Add(btnAdd);
 
-        var btnLogin2 = new Button { Text = "重新登录", Width = 92, Height = 34, Margin = new Padding(0, 6, 8, 0), FlatStyle = FlatStyle.Flat, BackColor = CardBg, ForeColor = TextMain, Cursor = Cursors.Hand };
+        var btnLogin2 = new Button { Text = "重新登录", Width = S(92), Height = S(34), Margin = new Padding(0, S(6), S(8), 0), FlatStyle = FlatStyle.Flat, BackColor = CardBg, ForeColor = TextMain, Cursor = Cursors.Hand };
         btnLogin2.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240);
         btnLogin2.Click += async (_, _) => { if (CurAccount != null) await LoginAndRefreshAsync(CurAccount); };
         top.Controls.Add(btnLogin2);
 
-        var btnDel = new Button { Text = "删除", Width = 70, Height = 34, Margin = new Padding(0, 6, 8, 0), FlatStyle = FlatStyle.Flat, BackColor = CardBg, ForeColor = TextMain, Cursor = Cursors.Hand };
+        var btnDel = new Button { Text = "删除", Width = S(70), Height = S(34), Margin = new Padding(0, S(6), S(8), 0), FlatStyle = FlatStyle.Flat, BackColor = CardBg, ForeColor = TextMain, Cursor = Cursors.Hand };
         btnDel.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240);
         btnDel.Click += (_, _) => RemoveAccount();
         top.Controls.Add(btnDel);
 
-        table.Controls.Add(top, 0, 0);
-
-        // 第二行：会员开关 + 提示文字独占一行，避免与按钮同排被挤截
-        var hintRow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = CardBg };
-        _chkMember.Margin = new Padding(0, 12, 14, 0);
+        // 第二行：会员开关 + 提示文字独占一行，避免与按钮同排被挤截。
+        // Dock=Bottom + 固定行高（按 DPI 缩放）：保证任何缩放下整行可见
+        var hintRow = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = S(42), FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = CardBg };
+        _chkMember.Margin = new Padding(0, S(8), S(14), 0);
         _chkMember.CheckedChanged += (_, _) => OnMemberToggled();
         hintRow.Controls.Add(_chkMember);
-        var lbl = new Label { Text = "切换账号即刷新仪表盘。", ForeColor = TextMuted, AutoSize = true, Margin = new Padding(0, 10, 0, 0) };
+        var lbl = new Label { Text = "切换账号即刷新仪表盘。", ForeColor = TextMuted, AutoSize = true, Margin = new Padding(0, S(10), 0, 0) };
         hintRow.Controls.Add(lbl);
-        table.Controls.Add(hintRow, 0, 1);
+
+        // 添加顺序（先 Fill 行后 Bottom 行）+ Dock 逆序布局：hintRow 钉在底部，top 填充剩余
+        panel.Controls.Add(top);
+        panel.Controls.Add(hintRow);
 
         RefreshAccountCombo();
-        return table;
+        return panel;
     }
 
     private void RefreshAccountCombo()
@@ -662,8 +709,8 @@ public partial class MainForm : Form
     {
         var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, BackColor = CardBg };
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, S(86)));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, S(110)));
 
         _txtWebhook.Text = _config.FeishuWebhook ?? "";
         _txtWebhook.Dock = DockStyle.Fill;
@@ -704,10 +751,13 @@ public partial class MainForm : Form
         SetLog(ok ? "测试消息已发送，请查看飞书群。" : "测试消息发送失败，请检查 webhook 地址是否正确。");
     }
 
-    private Panel CardPanel(string title, Control body)
+    private Panel CardPanel(string title, Control body, int minHeight = 0)
     {
-        var p = new Panel { Dock = DockStyle.Fill, BackColor = CardBg, Padding = new Padding(16, 12, 16, 6), Margin = new Padding(0, 0, 0, 10) };
-        var t = new Label { Text = title, Dock = DockStyle.Top, Height = 26, Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = TextMain };
+        var p = new Panel { Dock = DockStyle.Fill, BackColor = CardBg, Padding = new Padding(S(16), S(12), S(16), S(6)), Margin = new Padding(0, 0, 0, S(10)) };
+        // 高度下限（DPI 缩放后）：AutoSize 测量偏小时兜底，保证卡片内容完整显示
+        if (minHeight > 0) p.MinimumSize = new Size(0, S(minHeight));
+        // 标题 AutoSize：高度随字体实际渲染高度自适应，避免高显示缩放下底部笔画被裁剪
+        var t = new Label { Text = title, Dock = DockStyle.Top, AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = TextMain, Margin = new Padding(0, 0, 0, S(6)) };
         body.Dock = DockStyle.Fill;
         p.Controls.Add(body);
         p.Controls.Add(t);
@@ -716,14 +766,15 @@ public partial class MainForm : Form
 
     private Panel Card(string title, Control body)
     {
-        var p = new Panel { Dock = DockStyle.Fill, BackColor = CardBg, Padding = new Padding(14, 10, 14, 10), Margin = new Padding(6) };
+        var p = new Panel { Dock = DockStyle.Fill, BackColor = CardBg, Padding = new Padding(S(14), S(10), S(14), S(10)), Margin = new Padding(S(6)) };
         var t = new Label
         {
             Text = title,
             Dock = DockStyle.Top,
-            Height = 24,
+            AutoSize = true,
             Font = new Font("Segoe UI", 9),
-            ForeColor = TextMuted
+            ForeColor = TextMuted,
+            Margin = new Padding(0, 0, 0, S(4))
         };
         body.Dock = DockStyle.Fill;
         p.Controls.Add(body);

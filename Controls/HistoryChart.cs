@@ -46,11 +46,13 @@ public class HistoryChart : Control
         {
             using var f = new Font("Segoe UI", 9);
             using var b = new SolidBrush(Color.FromArgb(148, 163, 184));
-            g.DrawString("暂无签到数据", f, b, new PointF(12, 12));
+            g.DrawString("暂无签到数据", f, b, new PointF(12 * MainForm.DpiScale, 12 * MainForm.DpiScale));
             return;
         }
 
-        const int padLeft = 40, padRight = 16, padTop = 16, padBottom = 26;
+        // 边距按显示缩放换算：高缩放下字体像素变大，固定 40/26px 边距会裁剪 Y 轴刻度与日期
+        float k = MainForm.DpiScale;
+        float padLeft = 40 * k, padRight = 16 * k, padTop = 16 * k, padBottom = 26 * k;
         float w = Width - padLeft - padRight;
         float h = Height - padTop - padBottom;
 
@@ -91,11 +93,11 @@ public class HistoryChart : Control
         {
             var first = _points[0].Date.ToString("MM-dd");
             var last = _points[^1].Date.ToString("MM-dd");
-            g.DrawString(first, font, textBrush, padLeft, Height - padBottom + 5);
+            g.DrawString(first, font, textBrush, padLeft, Height - padBottom + 5 * k);
             var sz = g.MeasureString(last, font);
-            g.DrawString(last, font, textBrush, padLeft + w - sz.Width, Height - padBottom + 5);
-            g.DrawString(maxV.ToString("0"), font, textBrush, 4, padTop - 5);
-            g.DrawString(minV.ToString("0"), font, textBrush, 4, padTop + h - 5);
+            g.DrawString(last, font, textBrush, padLeft + w - sz.Width, Height - padBottom + 5 * k);
+            g.DrawString(maxV.ToString("0"), font, textBrush, 4 * k, padTop - 5 * k);
+            g.DrawString(minV.ToString("0"), font, textBrush, 4 * k, padTop + h - 5 * k);
         }
     }
 }

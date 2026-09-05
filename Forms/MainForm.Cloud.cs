@@ -20,10 +20,10 @@ public partial class MainForm
 
     private Panel BuildCloud()
     {
-        var p = new Panel { Dock = DockStyle.Fill, BackColor = ContentBg, Padding = new Padding(16) };
+        var p = new Panel { Dock = DockStyle.Fill, BackColor = ContentBg, Padding = new Padding(S(16)) };
         var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, BackColor = ContentBg };
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 180));
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 92));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, S(180)));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, S(92)));
         grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         grid.Controls.Add(CardPanel("云端自动签到（GitHub Actions）", BuildCloudAction()), 0, 0);
@@ -46,13 +46,13 @@ public partial class MainForm
         var panel = new Panel { Dock = DockStyle.Fill, BackColor = CardBg };
 
         _lblCloudState.Dock = DockStyle.Top;
-        _lblCloudState.Height = 40;
+        _lblCloudState.Height = S(40);
         _lblCloudState.Font = new Font("Segoe UI", 10, FontStyle.Bold);
         _lblCloudState.ForeColor = TextMain;
         _lblCloudState.TextAlign = ContentAlignment.MiddleLeft;
 
         _lblCloudCode.Dock = DockStyle.Top;
-        _lblCloudCode.Height = 30;
+        _lblCloudCode.Height = S(30);
         _lblCloudCode.Font = new Font("Consolas", 12, FontStyle.Bold);
         _lblCloudCode.ForeColor = Accent;
         _lblCloudCode.TextAlign = ContentAlignment.MiddleLeft;
@@ -79,7 +79,7 @@ public partial class MainForm
         _btnUsePat.Click += async (_, _) => await UsePatAsync();
 
         _cloudActionRow.Dock = DockStyle.Bottom;
-        _cloudActionRow.Height = 48;
+        _cloudActionRow.Height = S(48);
         _cloudActionRow.ColumnCount = 2;
         _cloudActionRow.RowCount = 1;
         _cloudActionRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));

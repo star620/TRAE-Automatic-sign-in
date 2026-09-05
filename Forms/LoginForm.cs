@@ -1,3 +1,4 @@
+using System.Drawing;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
@@ -22,6 +23,10 @@ public class LoginForm : Form
         _userDataDir = userDataDir;
         _initialToken = initialToken;
         _onToken = onToken;
+
+        // 启用 DPI 自动缩放：控件尺寸按 96-DPI 设计，高显示缩放下由框架统一放大（见 MainForm 同款修复）
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
 
         Text = "登录 TRAE 账号";
         Width = 900;
