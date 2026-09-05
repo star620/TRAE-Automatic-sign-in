@@ -8,7 +8,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>TraeCheckin</AssemblyName>
     <RootNamespace>TraeCheckin</RootNamespace>
-    <Version>1.4.5</Version>
+    <Version>1.5.0</Version>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <!-- 统一构建产物输出目录（主程序 + 启动器都输出到这里）。
