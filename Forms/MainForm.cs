@@ -79,6 +79,10 @@ public partial class MainForm : Form
 
     private static readonly Icon AppIcon = LoadAppIcon();
 
+    /// <summary>当前程序版本（从程序集版本号动态生成，如 v1.4.5）。</summary>
+    private static string VersionText =>
+        "v" + (typeof(MainForm).Assembly.GetName().Version?.ToString(3) ?? "?");
+
     private static Icon LoadAppIcon()
     {
         try
@@ -364,7 +368,8 @@ public partial class MainForm : Form
 
         var hint = new Label
         {
-            Text = "提示：本程序固定小窗显示。关闭窗口后自动最小化到系统托盘，后台继续自动签到。",
+            Text = $"版本：{VersionText}" + Environment.NewLine +
+                   "提示：本程序固定小窗显示。关闭窗口后自动最小化到系统托盘，后台继续自动签到。",
             Dock = DockStyle.Fill,
             ForeColor = TextMuted,
             Font = new Font("Segoe UI", 9),
