@@ -27,6 +27,11 @@ public class AppConfig
     public List<TraeAccount> Accounts { get; set; } = new();
     /// <summary>仪表盘当前展示的账号 Id；为空时取 Accounts[0]。</summary>
     public string? ActiveAccountId { get; set; }
+    /// <summary>主窗口上次关闭时的位置与尺寸（正常状态的边界），null/无效时用默认尺寸居中。</summary>
+    public int? WindowLeft { get; set; }
+    public int? WindowTop { get; set; }
+    public int? WindowWidth { get; set; }
+    public int? WindowHeight { get; set; }
 
     private static string ConfigDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TraeCheckin");

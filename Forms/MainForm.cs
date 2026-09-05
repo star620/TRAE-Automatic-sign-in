@@ -4,7 +4,7 @@ namespace TraeCheckin;
 
 /// <summary>
 /// 主界面：深色侧边栏 + 蓝色强调 + 浅色内容区。
-/// 固定小窗（不可缩放），左侧导航可切换「仪表盘 / 签到记录 / 设置」。
+/// 可自由调整大小（有最小尺寸限制），左侧导航可切换「仪表盘 / 签到记录 / 云端签到 / 设置」。
 /// </summary>
 public partial class MainForm : Form
 {
@@ -125,13 +125,38 @@ public partial class MainForm : Form
         MigrateLegacyHistoryFiles();
 
         Text = "Trae 每日签到助手";
-        // 窗口尺寸同样按缩放换算（否则放大后的内容会被固定小窗裁剪），并防超出屏幕
-        var wa = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, S(1200), S(780));
-        ClientSize = new Size(Math.Min(S(1200), wa.Width), Math.Min(S(780), wa.Height));
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
+        // 允许自由调整大小：布局全部基于 Dock/百分比，天然自适应；
+        // MinimumSize 保证缩到最小时侧边栏与各卡片内容仍可正常显示
+        FormBorderStyle = FormBorderStyle.Sizable;
+        MaximizeBox = true;
+        MinimumSize = new Size(S(940), S(600));
         MinimizeBox = true;
-        StartPosition = FormStartPosition.CenterScreen;
+        StartPosition = FormStartPosition.Manual;
+
+        // 恢复上次关闭时的窗口位置与尺寸；无记录或记录无效（如换显示器后跑出屏幕）则默认尺寸居中。
+        // 保存/恢复统一使用窗口 Bounds（RestoreBounds，含标题栏），避免与 ClientSize 换算产生偏差
+        var wa = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, S(1200), S(780));
+        if (_config.WindowWidth is int w && _config.WindowHeight is int hgt && w > 0 && hgt > 0)
+        {
+            // 尺寸夹在最小值与主屏工作区之间
+            w = Math.Min(Math.Max(w, S(940) + 40), wa.Width);
+            hgt = Math.Min(Math.Max(hgt, S(600) + 40), wa.Height);
+            var l = _config.WindowLeft ?? wa.Left;
+            var t = _config.WindowTop ?? wa.Top;
+            // 位置校验：窗口至少 60px 宽度留在某块屏幕工作区内，防止换显示器后完全不可见
+            var bounds = new Rectangle(l, t, w, hgt);
+            var visible = Screen.AllScreens.Any(s => s.WorkingArea.IntersectsWith(bounds) &&
+                                                      Rectangle.Intersect(s.WorkingArea, bounds).Width >= 60);
+            if (visible)
+                Bounds = new Rectangle(l, t, w, hgt);
+            else
+                StartPosition = FormStartPosition.CenterScreen;
+        }
+        else
+        {
+            ClientSize = new Size(Math.Min(S(1200), wa.Width), Math.Min(S(780), wa.Height));
+            StartPosition = FormStartPosition.CenterScreen;
+        }
         BackColor = ContentBg;
         Icon = AppIcon;
 
@@ -405,7 +430,7 @@ public partial class MainForm : Form
         var footer = new Label
         {
             Text = $"版本：{VersionText}" + Environment.NewLine +
-                   "提示：本程序固定小窗显示。关闭窗口后自动最小化到系统托盘，后台继续自动签到。",
+                   "提示：关闭窗口后自动最小化到系统托盘，后台继续自动签到。",
             Dock = DockStyle.Bottom,
             AutoSize = false,
             Height = S(46),
@@ -1335,8 +1360,23 @@ public partial class MainForm : Form
         return streak;
     }
 
+    /// <summary>把当前窗口位置与尺寸写入配置（最大化/最小化时取 RestoreBounds 的正常状态边界）。</summary>
+    private void SaveWindowBounds()
+    {
+        // 正常状态下 Bounds 实时准确（RestoreBounds 此时可能仍是初始默认值，不会随移动同步）
+        var b = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+        if (b.Width <= 0 || b.Height <= 0) return;
+        _config.WindowLeft = b.X;
+        _config.WindowTop = b.Y;
+        _config.WindowWidth = b.Width;
+        _config.WindowHeight = b.Height;
+        _config.Save();
+    }
+
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
+        // 无论最小化到托盘还是真正退出，都记录窗口位置尺寸，下次启动恢复
+        SaveWindowBounds();
         if (!_allowClose && e.CloseReason == CloseReason.UserClosing && _config.AutoCheckinEnabled)
         {
             e.Cancel = true;
